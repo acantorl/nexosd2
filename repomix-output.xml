@@ -1,0 +1,405 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.github/
+  workflows/
+    playwright.yml
+data/
+  login.data.ts
+pages/
+  base.page.ts
+  dashboard.page.ts
+  login.page.ts
+  pdp.page.ts
+tests/
+  e2e-flow.spec.ts
+  login.negative.spec.ts
+  login.spec.ts
+  logout.spec.ts
+  search.spec.ts
+.gitignore
+package.json
+playwright.config.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".github/workflows/playwright.yml">
+name: Playwright Tests
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+    - name: Run Playwright tests
+      run: npx playwright test
+    - uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30
+</file>
+
+<file path="data/login.data.ts">
+export const validUser = {
+  user: "standard_user",
+  password: "secret_sauce",
+};
+
+export const invalidUser = {
+  user: "error_user",
+  password: "secret_sauce",
+};
+
+export const blockUser = {
+  user: "locked_out_user",
+  password: "secret_sauce",
+};
+
+export const emptyUser = {
+  user: "",
+  password: "",
+};
+</file>
+
+<file path="pages/base.page.ts">
+import { Page } from "@playwright/test";
+
+export class BasePage {
+  readonly page: Page;
+
+  constructor(page: Page) {
+    this.page = page;
+  }
+
+  async navigateTo(path: string): Promise<void> {
+    await this.page.goto(path);
+  }
+}
+</file>
+
+<file path="pages/dashboard.page.ts">
+import { Page, Locator } from "@playwright/test";
+import { BasePage } from "./base.page";
+
+export class DashboardPage extends BasePage {
+  readonly menuBtn: Locator;
+  readonly logOutInput: Locator;
+  readonly filterBtn: Locator;
+  readonly itemFiveProduct: Locator;
+
+  constructor(page: Page) {
+    super(page);
+
+    this.menuBtn = page.locator("#react-burger-menu-btn");
+    this.logOutInput = page.locator("#logout_sidebar_link");
+    this.filterBtn = page.locator('[data-test="product-sort-container"]');
+
+    this.itemFiveProduct = page.locator("#item_5_title_link");
+  }
+
+  async closedSession(): Promise<void> {
+    await this.menuBtn.click();
+    await this.logOutInput.click();
+  }
+
+  async searchProduct(): Promise<void> {
+    await this.filterBtn.selectOption("hilo");
+    await this.itemFiveProduct.click();
+  }
+}
+</file>
+
+<file path="pages/login.page.ts">
+import { Page, Locator } from "@playwright/test";
+import { BasePage } from "./base.page";
+
+export class LoginPage extends BasePage {
+  readonly usernameInput: Locator;
+  readonly passwordInput: Locator;
+  readonly loginButton: Locator;
+  readonly titleSpan: Locator;
+
+  constructor(page: Page) {
+    super(page);
+
+    this.usernameInput = page.locator("#user-name");
+
+    this.passwordInput = page.locator("#password");
+    this.loginButton = page.locator("#login-button");
+    this.titleSpan = page.locator('[data-test="title"]');
+  }
+
+  async openSession(user: string, pass: string): Promise<void> {
+    await this.usernameInput.fill(user);
+    await this.passwordInput.fill(pass);
+    await this.loginButton.click();
+  }
+}
+</file>
+
+<file path="pages/pdp.page.ts">
+import { Page, Locator } from "@playwright/test";
+import { BasePage } from "./base.page";
+
+export class PdpPage extends BasePage {
+  readonly backProductsBtn: Locator;
+  readonly addCartPdpBtn: Locator;
+  readonly productName: Locator;
+
+  constructor(page: Page) {
+    super(page);
+
+    this.backProductsBtn = page.locator("#back-to-products");
+    this.addCartPdpBtn = page.locator("#add-to-cart");
+    this.productName = page.locator(".inventory_details_name");
+  }
+
+  async addCart(): Promise<void> {
+    await this.addCartPdpBtn.click();
+  }
+}
+</file>
+
+<file path="tests/e2e-flow.spec.ts">
+import { test, expect } from "@playwright/test";
+import { LoginPage } from "../pages/login.page";
+import { DashboardPage } from "../pages/dashboard.page";
+import { PdpPage } from "../pages/pdp.page";
+import { validUser } from "../data/login.data";
+
+test.describe("Feature: End to End Flow", () => {
+  test("Scenario: Successful E2E Flow - Login, Select Product and Logout", async ({
+    page,
+  }) => {
+    const loginPage = new LoginPage(page);
+    const dashboardPage = new DashboardPage(page);
+    const pdpPage = new PdpPage(page);
+
+    // 1. Login
+    await loginPage.navigateTo("https://www.saucedemo.com");
+    await loginPage.openSession(validUser.user, validUser.password);
+    await expect(loginPage.titleSpan).toHaveText("Products");
+
+    // 2. Búsqueda / Selección de producto e inspección en PDP
+    await dashboardPage.searchProduct();
+    await expect(pdpPage.backProductsBtn).toBeVisible();
+
+    // Regresar al dashboard para el cierre de sesión
+    await pdpPage.backProductsBtn.click();
+
+    // 3. Logout
+    await dashboardPage.closedSession();
+    await expect(page).toHaveURL("https://www.saucedemo.com/");
+  });
+});
+</file>
+
+<file path="tests/login.negative.spec.ts">
+import { test, expect } from "@playwright/test";
+import { LoginPage } from "../pages/login.page";
+import { emptyUser, invalidUser } from "../data/login.data";
+
+test.describe("Feature: Casos Negativos de Login", () => {
+  test("Scenario: Intento de inicio de sesión con usuario bloqueado", async ({
+    page,
+  }) => {
+    const loginPage = new LoginPage(page);
+
+    await loginPage.navigateTo("https://www.saucedemo.com");
+    await loginPage.openSession("locked_out_user", "secret_sauce");
+
+    const errorMessage = page.locator('[data-test="error"]');
+    await expect(errorMessage).toBeVisible();
+    await expect(errorMessage).toContainText(
+      "Epic sadface: Sorry, this user has been locked out.",
+    );
+  });
+
+  test("Scenario: Attempt to log in with an empty user", async ({ page }) => {
+    const loginPage = new LoginPage(page);
+
+    await loginPage.navigateTo("https://www.saucedemo.com");
+    await loginPage.openSession(emptyUser.user, emptyUser.password);
+
+    const errorMessage = page.locator('[data-test="error"]');
+    await expect(errorMessage).toBeVisible();
+    await expect(errorMessage).toContainText(
+      "Epic sadface: Username is required",
+    );
+  });
+});
+</file>
+
+<file path="tests/login.spec.ts">
+import { test, expect } from "@playwright/test";
+import { LoginPage } from "../pages/login.page";
+import { validUser } from "../data/login.data";
+
+test.describe("Feature: Login", () => {
+  test(`Scenario: Successful Login for user ${validUser.user}`, async ({
+    page,
+  }) => {
+    const loginPage = new LoginPage(page);
+
+    await loginPage.navigateTo("https://www.saucedemo.com");
+    await loginPage.openSession(validUser.user, validUser.password);
+
+    await expect(loginPage.titleSpan).toHaveText("Products");
+  });
+});
+</file>
+
+<file path="tests/logout.spec.ts">
+import { test, expect } from "@playwright/test";
+import { LoginPage } from "../pages/login.page";
+import { validUser } from "../data/login.data";
+import { DashboardPage } from "../pages/dashboard.page";
+
+test.describe("Feature: Logut", () => {
+  test(`Scenario: Successful Logout for user ${validUser.user}`, async ({
+    page,
+  }) => {
+    const loginPage = new LoginPage(page);
+    const dashboard = new DashboardPage(page);
+
+    await loginPage.navigateTo("https://www.saucedemo.com");
+    await loginPage.openSession(validUser.user, validUser.password);
+    await dashboard.closedSession();
+
+    await expect(page).toHaveURL(/saucedemo\.com\/?$/);
+  });
+});
+</file>
+
+<file path="tests/search.spec.ts">
+import { test, expect } from "@playwright/test";
+import { LoginPage } from "../pages/login.page";
+import { DashboardPage } from "../pages/dashboard.page";
+import { PdpPage } from "../pages/pdp.page";
+import { validUser } from "../data/login.data";
+
+test.describe("Feature: Search product", () => {
+  test("Scenario: Successful search product and navigate to PDP", async ({
+    page,
+  }) => {
+    const loginPage = new LoginPage(page);
+    const dashboardPage = new DashboardPage(page);
+    const pdpPage = new PdpPage(page);
+
+    await loginPage.navigateTo("https://www.saucedemo.com");
+    await loginPage.openSession(validUser.user, validUser.password);
+
+    await dashboardPage.searchProduct();
+
+    await expect(pdpPage.backProductsBtn).toBeVisible();
+    await expect(pdpPage.addCartPdpBtn).toBeVisible();
+  });
+});
+</file>
+
+<file path=".gitignore">
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+</file>
+
+<file path="package.json">
+{
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2"
+  },
+  "scripts": {}
+}
+</file>
+
+<file path="playwright.config.ts">
+import { defineConfig, devices } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "./tests",
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [["html", { open: "never" }], ["list"]],
+  use: {
+    baseURL: "https://www.saucedemo.com/", // Cambiar por tu ambiente QA/sandbox
+    trace: "on", // Mantiene el trace ante reintentos o fallos ('on' para forzar siempre)
+    screenshot: "only-on-failure", // Captura pantalla automáticamente si falla el test
+    video: "retain-on-failure",
+  },
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+    },
+  ],
+});
+</file>
+
+</files>
